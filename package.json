@@ -1,0 +1,30 @@
+{
+  "name": "crypto-trader-ts",
+  "version": "1.0.0",
+  "description": "",
+  "main": "./dist/index.js",
+  "scripts": {
+    "build": "babel src -d dist",
+    "start": "npm run build && node dist/main.js",
+
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+
+  "dependencies": {
+    "@babel/cli": "^7.18.6",
+    "@babel/core": "^7.18.6",
+    "@babel/preset-env": "^7.18.6",
+    "@binance/connector": "^1.11.0",
+    "@prisma/client": "^4.0.0",
+    "@types/node": "^18.0.5",
+    "dotenv": "^16.0.1",
+    "prisma": "^4.0.0",
+    "ts-node": "^10.9.1"
+  },
+  "devDependencies": {
+    "typescript": "^4.7.4"
+  }
+}

@@ -1,0 +1,15 @@
+{
+    "presets": [
+      ["@babel/env", {
+        "targets": {
+          "node": "current"
+        }
+      }]
+    ],
+    "sourceMaps": "inline",
+    "retainLines": true,
+    "plugins": [
+      "@babel/plugin-proposal-class-properties",
+      "@babel/plugin-proposal-object-rest-spread"
+    ]
+  }

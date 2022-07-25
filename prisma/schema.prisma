@@ -1,0 +1,55 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "mysql"
+  url      = env("DATABASE_URL")
+}
+
+model Quotes {
+  id  Int @id @default (autoincrement())
+  opentime DateTime
+  ticker String @db.VarChar(255)
+  price Float
+  isCandle Boolean @default(false)
+  timeframe Int @default(1)
+  priceO Float
+  priceH Float
+  priceL Float
+  priceC Float
+  volume Float
+  fetchedAt DateTime @default (now()) // use this to purge very old data
+
+  @@index (ticker)
+  @@unique([ticker, opentime, timeframe], name: "ticker_opentime_timeframe")
+}
+
+model Post {
+  id        Int      @id @default(autoincrement())
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  title     String   @db.VarChar(255)
+  content   String?
+  published Boolean  @default(false)
+  author    User     @relation(fields: [authorId], references: [id])
+  authorId  Int
+}
+
+model Profile {
+  id     Int     @id @default(autoincrement())
+  bio    String?
+  user   User    @relation(fields: [userId], references: [id])
+  userId Int     @unique
+}
+
+model User {
+  id      Int      @id @default(autoincrement())
+  email   String   @unique
+  name    String?
+  posts   Post[]
+  profile Profile?
+}
