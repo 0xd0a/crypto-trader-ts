@@ -3,266 +3,156 @@
 import fetch from 'isomorphic-fetch'
 import { resolve } from 'url';
 import WebSocket from 'ws'
-
+import { WebsocketClient} from 'binance';
+import {Console} from 'console'
+import fs from 'fs'
 
 // TODO: make an async wrapper around WebSocket
-class BinanceSocket {
-    constructor(host, handlerClass) { //, customOnOpen, customOnMessage, customOnClose) {
-        this.host = host;
-        this.socketConnected = false;
-        this.status = "connecting";
-        this.handlerClass=handlerClass
-        // onopen function
-        if (this.handlerClass?.onOpen) this.onOpenCallback = this.handlerClass?.onOpen.bind(this.handlerClass)
-        else this.onOpenCallback = function (msg) { console.log("BinanceSocket > default onopen"); };
-        // onmessage function
-        if (this.handlerClass?.onMessage) this.onMessageCallback = this.handlerClass?.onMessage.bind(this.handlerClass);
-        else this.onMessageCallback = function (msg) { console.log("BinanceSocket > default onmessage: " + msg.data); };
-        // onclose function
-        if (this.handlerClass?.onClose) this.onCloseCallback = this.handlerClass?.onClose.bind(this.handlerClass)
-        else this.onCloseCallback = function (event) { console.log("BinanceSocket > disconnected - event.code: " + event.code + ", reason: " + event.reason); };
-        // start the websocket
-        try {
-            this.websocket = new WebSocket(host);
-            // set a custom on open callback
-            this.websocket.onOpenCallback = this.onOpenCallback;
-            this.websocket.onopen =  (msg) => {
-                console.log("BinanceSocket > welcome - status: " + this.readyState);
-                this.socketConnected = true;
-                this.status = "connected";
-                console.log(this.onOpenCallback);
-                // call the onopen callback
-                this.websocket.onOpenCallback();
-            };
-            // set an onmessage callback
-            this.websocket.onmessage = this.onMessageCallback;
-            // set an onclose callback
-            this.websocket.onCloseCallback = this.onCloseCallback;
-            this.websocket.onclose = async (event) => {
-                console.log("BinanceSocket:: closed");
-                this.socketConnected = false;
-                this.status = "closed";
-                // call the onclose callback
-                this.websocket.onCloseCallback();
-            }
-            // set an onerror function
-            this.websocket.onerror =  (event) => {
-                console.log("BinanceSocket > error");
-                this.socketConnected = false;
-                this.status = "error";
-            };
-        }
-        catch (ex) {
-            console.log("BinanceSocket > exception: " + ex);
-            this.status = "error";
-        }
+class BinancePriceStream {
+    subscriptions=[]
+    constructor() {
+        // const callbacks = {
+        //     open: () => client.logger.log('open'),
+        //     close: () => client.logger.log('closed'),
+        //     message: data => client.logger.log(data)
+        //   }
+          const apiKey = process.env['API_KEY']
+          const apiSecret = process.env['API_SECRET']
+          const output = fs.createWriteStream('./logs/stdout.log')
+          const errorOutput = fs.createWriteStream('./logs/stderr.log')
+          const logger2 = new Console({ stdout: output, stderr: errorOutput })
+          const logger = {
+            ...logger2,
+            silly: (...params) => {},
+          };
+          const wsClient = new WebsocketClient({
+            api_key: apiKey,
+            api_secret: apiSecret,
+            beautify: true,
+            // Disable ping/pong ws heartbeat mechanism (not recommended)
+            // disableHeartbeat: true
+          }, logger);
+
+          this.client=wsClient
+          wsClient.on('message', this.onData.bind(this))
+
     }
 
-    async close() {
-        await this.websocket.close();
-    }
-
-    send(str) {
-        try {
-            this.websocket.send(str);
-        }
-        catch (ex) {
-            console.log("BinanceSocket > send > exception: " + ex);
-        }
-    }
-
-    isConnected() {
-        return this.socketConnected;
-    }
-
-    getStatus() {
-        return this.status;
-    }
-
-    getSocket() {
-        return this.websocket;
-    }
-
-    setOnErrorCallback(onErrorCallback) {
-        // set an onerror function
-        this.websocket.onErrorCallback = onErrorCallback;
-        this.websocket.onerror =  (event) => {
-            this.socketConnected = false;
-            this.status = "error";
-            this.websocket.onErrorCallback(event);
-        };
-    }
-}
-
-class BinanceStream {
-    constructor () {}
-
-    start() {
-        // get a few recent values before starting the stream
-        if(this.url!= "") 
-            fetch("GET", this.url)
-            .then(this.checkStatus)
-            .then(this.parseJson)
-            .then((json)=>{
-                json.forEach(e => {
-                    this.handler.initData(e); // initial Data 
-                });
-
-            })
-            .catch((e)=> {
-                console.log("BinanceStream::start error while requesting data from binance ", this.url);
-            }
-            )
-        if (!this.webSocketConnected) {
-            //this.binanceWebSocket = new BinanceSocket(this.webSocketHost, this);
-            this.binanceWebSocket = new WebSocket(this.webSocketHost, this);
-            this.binanceWebSocket.onerror=this.onWebSocketError.bind(this);
-            
-            this.binanceWebSocket.onopen =  (msg) => {
-                console.log("BinanceSocket > welcome - status: " + this.readyState);
-                this.socketConnected = true;
-                this.status = "connected";
-                console.log(this.onOpenCallback);
-                // call the onopen callback
-                this.binanceWebSocket.onOpenCallback();
-            };
-            // set an onmessage callback
-            this.binanceWebSocket.onmessage = this.onMessage.bind(this);
-            // set an onclose callback
-            this.binanceWebSocket.onCloseCallback = this.onClose.bind(this);
-            this.binanceWebSocket.onclose = async (event) => {
-                console.log("BinanceSocket:: closed");
-                this.socketConnected = false;
-                this.status = "closed";
-                // call the onclose callback
-                this.binanceWebSocket.onCloseCallback();
-            }
-            // set an onerror function
-            this.binanceWebSocket.onerror =  (event) => {
-                console.log("BinanceSocket > error");
-                this.socketConnected = false;
-                this.status = "error";
-            };
-        }
-    }
-
-    checkStatus(response) {
-        if (response.status >= 200 && response.status < 300) {
-          return Promise.resolve(response)
-        } else {
-          return Promise.reject(new Error(response.statusText))
-        }
-      }
-      
-    parseJson(response) {
-        return response.json()
-    }
-
-    async close() {
-        const pr=new Promise((r,e)=> {this.res=()=>{r(true)}})
-        await this.binanceWebSocket.close();
-        await this.binanceWebSocket.onCloseCallback(this.res)
-        console.log("Now waiting for promise",this.res)
-        return pr
-    }
-
-    onOpen() {
-        this.webSocketConnected = true;
-        console.log("websocket connected");
-    }
-
-    onMessage(msg) {
-        var json = JSON.parse(msg.data);
-        //var cs = json.k;
-        //console.log(this)
-        this.handler.onData(json); // real Data
-    }
-
-    onClose(pr) {
-        console.log("This is Stream::onClose with ",pr)
-        if (this.webSocketConnected) {
-            this.webSocketConnected = false;
-            console.log("websocket closed");
-        }
-        console.log("Trying to resolve")
-        //pr(true);
-        console.log("End trying to resolve")
-    }
-
-    onWebSocketError(event) {
-        // Connection is only valid for 24 hours so make sure to reconnect in this function
-        this.webSocketConnected = false;
-        console.log("custom websocket error function:");
-        console.log(event);
-    }
-}
-
-export class CandlestickStream extends BinanceStream {
-    constructor(symbol, interval, handler) {
-        this.symbol = symbol;
-        this.interval = interval;
-        this.handler = handler; // has to implement onData(data)
-        this.webSocketConnected = false;
-        this.webSocketHost = "wss://stream.binance.com:9443/ws/" + this.symbol + "@kline_" + this.interval;
-        this.url="https://api.binance.com/api/v3/klines?symbol=" + this.symbol.toUpperCase() + "&interval=" + this.interval + "&limit=500";
-        this.start()
-    }
-
-}
-
-export class MiniTickerStream extends BinanceStream {
-    constructor(symbol, handler) {
-        super()
-        this.symbol = symbol;
-        this.interval = interval;
-        this.handler = handler; // has to implement onData(data)
-        this.webSocketConnected = false;
-        this.webSocketHost = "wss://stream.binance.com:9443/ws/" + this.symbol + "@miniTicker";
-        this.url="https://api.binance.com/api/v3/miniTicker?symbol=" + this.symbol.toUpperCase() + "&interval=" + this.interval + "&limit=500";
-        this.start()
-    }
-
-}
-
-export class AllTickerStream extends BinanceStream {
-    constructor(symbol, interval, handler) {
-        super()
-        this.symbol = symbol;
-        this.interval = interval;
-        this.handler = handler; // has to implement onData(data)
-        this.webSocketConnected = false;
-        this.webSocketHost = "wss://stream.binance.com:9443/ws/!miniTicker@arr";
-        this.url="" //"https://api.binance.com/api/v3/avgPrice?symbol=" + this.symbol.toUpperCase() ;
-        this.start()
-    }
-}
-
-class BinanceStreamCollection {
-
-    constructor () {
-        this.streams=[]
-    }
     static getInstance() {
         if (!this.instance) 
-            this.instance=new BinanceStreamCollection()
+            this.instance=new BinancePriceStream()
         return this.instance
     }
-    openStream(stream) {
-        this.streams.push(stream);
+
+    // THERE'S A BUG WITH THE LIBRARY THAT WON'T ALLOW TO SUBSCRIBE TO THE SAME TICKER TWICE
+    // FIXED IT
+
+    subscribeTicker(ticker, handler) {
+        console.log("Adding subscription to ",ticker)
+        const element=this.subscriptions.find(s=>s.ticker==ticker)
+        if(element) {
+            console.log("Trying to add subscription that already exists, adding extra handler")
+            element.handler.push(handler)
+            return
+        }
+        const ws=this.client.subscribeSpotSymbolMini24hrTicker(ticker);
+        this.subscriptions.push({ticker:ticker,handler:[handler],ws:ws})
     }
 
-    closeStream(stream) {
-        this.streams.find(e => {e==stream})?.close()
+    onData(data) {
+        console.log("Got Data ")
+        this.subscriptions.forEach(a=>{if(a.ticker==data.s && a.handler) a.handler.forEach(h=>h(data))})
     }
 
-    async closeAll () {
-        //this.streams.forEach(async s=>{await s.close()})
-        console.log("Starting to close")
-        await this.streams[0].close()
-        console.log("Still waiting")
-        //return Promise.resolve(true)
+    close() {
+        // disconnect
+        console.log("Closing binancePriceStream")
+        this.subscriptions.forEach(a=>{
+            console.log("Closing Subscription to ",a.ticker)
+            this.client.closeWs(a.ws,false)
+            console.log(this.client.closeWs)
+        });
     }
 }
-const streamCollection = BinanceStreamCollection.getInstance();
 
-export {streamCollection};
+export class BacktestingPriceStream {
+    currentDate
+    endDate
+    interval=60*1000 // 1 minute
+    constructor (startDate, endDate) {
+        this.currentDate=startDate
+        this.endDate=endDate
+        this.generateData()
+    }
+
+    generateData() {
+        this.currentDate+=interval
+        if(!this.quotes_db) this.quotes_db=new QuotesDB(this, this.db)
+
+        this.subscriptions.forEach(s=>this.onData(this.quotes_db.getQuote(s.ticker,this.currentDate)))
+        if (this.currentDate<this.endDate) 
+            setTimeout(this.generateData.bind(this),interval)
+    }
+
+    subscribeTicker(ticker, handler) {
+        console.log("Adding subscription to ",ticker)
+        const element=this.subscriptions.find(s=>s.ticker==ticker)
+        if(element) {
+            console.log("Trying to add subscription that already exists, adding extra handler")
+            element.handler.push(handler)
+            return
+        }
+        this.subscriptions.push({ticker:ticker,handler:[handler],ws:ws})
+    }
+
+    onData(data) {
+        console.log("Got Data ")
+        this.subscriptions.forEach(a=>{if(a.ticker==data.s && a.handler) a.handler.forEach(h=>h(data))})
+    }
+
+}
+
+
+// export class CandlestickStream extends BinanceStream {
+//     constructor(symbol, interval, handler) {
+//         this.symbol = symbol;
+//         this.interval = interval;
+//         this.handler = handler; // has to implement onData(data)
+//         this.webSocketConnected = false;
+//         this.webSocketHost = "wss://stream.binance.com:9443/ws/" + this.symbol + "@kline_" + this.interval;
+//         this.url="https://api.binance.com/api/v3/klines?symbol=" + this.symbol.toUpperCase() + "&interval=" + this.interval + "&limit=500";
+//         this.start()
+//     }
+
+// }
+
+// export class MiniTickerStream extends BinanceStream {
+//     constructor(symbol, handler) {
+//         super()
+//         this.symbol = symbol;
+//         this.interval = interval;
+//         this.handler = handler; // has to implement onData(data)
+//         this.webSocketConnected = false;
+//         this.webSocketHost = "wss://stream.binance.com:9443/ws/" + this.symbol + "@miniTicker";
+//         this.url="https://api.binance.com/api/v3/miniTicker?symbol=" + this.symbol.toUpperCase() + "&interval=" + this.interval + "&limit=500";
+//         this.start()
+//     }
+
+// }
+
+// export class AllTickerStream extends BinanceStream {
+//     // TODO Has to be a singleton and cached
+//     constructor(symbol, interval, handler) {
+//         super()
+//         this.symbol = symbol;
+//         this.interval = interval;
+//         this.handler = handler; // has to implement onData(data)
+//         this.webSocketConnected = false;
+//         this.webSocketHost = "wss://stream.binance.com:9443/ws/!miniTicker@arr";
+//         this.url="" //"https://api.binance.com/api/v3/avgPrice?symbol=" + this.symbol.toUpperCase() ;
+//         this.start()
+//     }
+// }
+
+const binancePriceStream= BinancePriceStream.getInstance();
+export {binancePriceStream};
