@@ -1,9 +1,10 @@
 import Candle from './Candle'
-
+import Semaphore from './Semaphore'
 export default class QuotesDB {
     constructor (binanceManager, db) {
         this.binanceManager=binanceManager // TODO throw err?
         this.db=db
+        this.db_semaphore=new Semaphore()
     }
     async getQuote(ticker, time) {
         // get from DB
@@ -14,7 +15,7 @@ export default class QuotesDB {
         //time.setMinutes(0)
         time.setMilliseconds(0)
         var l1
-
+        await this.db_semaphore.lock()
         try {
             l1=await this.db.Quotes.findFirstOrThrow({
                 where: {ticker: {equals: ticker}, opentime: {equals: time}  }  
@@ -25,6 +26,7 @@ export default class QuotesDB {
         catch (err) {
             console.log(time)
             console.log("Couldn't find the candle. fetching from the server")
+            
             try {
                 var kl=await this.binanceManager.getKlines({symbol:ticker, interval:'1m', startTime: time.getTime()})
             } catch (error) {
@@ -53,7 +55,9 @@ export default class QuotesDB {
             } catch (error) {
                 console.log("#2 Still couldn't find it")
             }
-        }    
+        } finally {
+            this.db_semaphore.unlock()
+        }   
         return l1    
         // will be used for both backtesting and live trading
     }

@@ -59,7 +59,7 @@ export class LiveBrokerManager extends IBrokerManager {
 
     }
     subscribeTicker(ticker,handler) {
-        binancePriceStream.subscribeTicker('ETHUSDT',this.onData.bind(this))
+        binancePriceStream.subscribeTicker(ticker,this.onData.bind(this))
     }
 
     getCurrentCandle(ticker) {
@@ -94,7 +94,7 @@ export class BacktestingBrokerManager extends IBrokerManager {
         this.currentTime=time;
     }
     subscribeTicker(ticker,handler) {
-        this.backtestingPriceStream.subscribeTicker('ETHUSDT',this.onData.bind(this))
+        this.backtestingPriceStream.subscribeTicker(ticker,this.onData.bind(this))
     }
     async generateData(date) {
         await this.backtestingPriceStream.getData(date)

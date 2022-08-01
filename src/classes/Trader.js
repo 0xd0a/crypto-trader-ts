@@ -40,7 +40,6 @@ export default class Trader {
         // init BrokerManager
 
         // init Algorithm
-
     }
 
     async run () {
