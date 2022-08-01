@@ -16,8 +16,8 @@ export class Strategy {
     }
     onData(data) {
         this.i++
-        if(this.i>3) this.trader.terminate()
-        console.log("Strategy Receiving data ", this.i," ",data.s)
+//        if(this.i>3) this.trader.terminate()
+        console.log("Strategy Receiving data ", this.i," ",data)
     }
 
     onInitData(data) {
@@ -41,8 +41,8 @@ export class Strategy2 {
     }
     onData(data) {
         this.i++
-        if(this.i>5) this.trader.terminate()
-        console.log("Strategy2 Receiving data ",this.i," ", data.s)
+//        if(this.i>5) this.trader.terminate()
+        console.log("Strategy2 Receiving data ",this.i," ", data)
     }
 
     onInitData(data) {

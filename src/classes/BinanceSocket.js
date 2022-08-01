@@ -6,16 +6,13 @@ import WebSocket from 'ws'
 import { WebsocketClient} from 'binance';
 import {Console} from 'console'
 import fs from 'fs'
+import QuotesDB from './QuotesDB';
 
 // TODO: make an async wrapper around WebSocket
 class BinancePriceStream {
     subscriptions=[]
     constructor() {
-        // const callbacks = {
-        //     open: () => client.logger.log('open'),
-        //     close: () => client.logger.log('closed'),
-        //     message: data => client.logger.log(data)
-        //   }
+ 
           const apiKey = process.env['API_KEY']
           const apiSecret = process.env['API_SECRET']
           const output = fs.createWriteStream('./logs/stdout.log')
@@ -76,38 +73,85 @@ class BinancePriceStream {
 }
 
 export class BacktestingPriceStream {
+    startDate
     currentDate
     endDate
-    interval=60*1000 // 1 minute
-    constructor (startDate, endDate) {
+    
+    constructor (startDate, endDate,interval, db, binanceMainClient,brokerManager) {
         this.currentDate=startDate
         this.endDate=endDate
-        this.generateData()
+        this.interval=interval
+        this.subscriptions=[]
+        this.brokerManager=brokerManager
+        this.db=db
+        this.binanceMainClient=binanceMainClient
+
     }
 
-    generateData() {
-        this.currentDate+=interval
-        if(!this.quotes_db) this.quotes_db=new QuotesDB(this, this.db)
 
-        this.subscriptions.forEach(s=>this.onData(this.quotes_db.getQuote(s.ticker,this.currentDate)))
-        if (this.currentDate<this.endDate) 
-            setTimeout(this.generateData.bind(this),interval)
+    generateData() { // emulate price socket with setImmediate
+        // if(!this.quotes_db) this.quotes_db=new QuotesDB(this.binanceMainClient, this.db)
+
+        // this.subscriptions?.forEach(s=>this.quotes_db.getQuote(s.ticker,this.currentDate)
+        //     .then(v=>this.onData(v)))
+        // this.currentDate.setTime(this.currentDate.getTime()+this.interval*1000)
+        // if (this.currentDate<this.endDate) 
+        //     this.timeOut=setImmediate(this.generateData.bind(this)) 
+        // else
+        //     this.brokerManager.finish();
+    }
+
+    async getData(date) {
+        if(!this.quotes_db) this.quotes_db=new QuotesDB(this.binanceMainClient, this.db)
+
+        // if (this.currentDate>this.endDate)
+        //     return // TODO 
+        
+        this.subscriptions.forEach(async s=>{
+            var data=await this.quotes_db.getQuote(s.ticker,date)
+            if(data){
+                var dataToPassDown= 
+                    {
+                        e: '24hrMiniTicker',
+                        E: data.opentime.getTime(),
+                        s: data.ticker,
+                        c: data.priceC,
+                        o: data.priceO,
+                        h: data.priceH,
+                        l: data.priceL,
+                        v: data.volume,
+                        q: '0',
+                        wsMarket: 'spot',
+                        wsKey: 'spot_miniTicker_'+data.ticker.toLowerCase()+'_'
+                    }
+                
+                this.onData(dataToPassDown)
+            }
+            }
+        )
+
+        //this.currentDate.setTime(this.currentDate.getTime()+this.interval)
     }
 
     subscribeTicker(ticker, handler) {
         console.log("Adding subscription to ",ticker)
-        const element=this.subscriptions.find(s=>s.ticker==ticker)
-        if(element) {
-            console.log("Trying to add subscription that already exists, adding extra handler")
-            element.handler.push(handler)
-            return
-        }
-        this.subscriptions.push({ticker:ticker,handler:[handler],ws:ws})
+        // const element=this.subscriptions?.find(s=>s.ticker==ticker)
+        // if(element) {
+        //     console.log("Trying to add subscription that already exists, adding extra handler")
+        //     element.handler.push(handler)
+        //     return
+        // }
+        this.subscriptions.push({ticker:ticker,handler:[handler],ws:undefined})
+        this.generateData()  // if want to use as a stream
     }
 
     onData(data) {
         console.log("Got Data ")
-        this.subscriptions.forEach(a=>{if(a.ticker==data.s && a.handler) a.handler.forEach(h=>h(data))})
+        this.subscriptions.forEach(a=>{if(a.handler) a.handler.forEach(h=>h(data))})
+    }
+
+    close() {
+//        clearTimeout(this.timeOut)
     }
 
 }
@@ -155,4 +199,6 @@ export class BacktestingPriceStream {
 // }
 
 const binancePriceStream= BinancePriceStream.getInstance();
+//const backtestingPriceStream= BacktestingPriceStream.getInstance();
+
 export {binancePriceStream};

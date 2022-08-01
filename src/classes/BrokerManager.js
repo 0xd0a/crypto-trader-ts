@@ -9,11 +9,13 @@ class IBrokerManager {
         this.db=db
         this.stats=stats
         this.config=config
+        this.onFinishCallback=null
     }
     getFee() {}
     getCurrentPrice(ticker) {}
     getCurrentCandle(ticker) {}
     trade (source, dest, sourceQty) {    }
+
     setOnDataHandler(handler) {
         this.onDataHandler=handler;
     }
@@ -32,7 +34,7 @@ class IBrokerManager {
 }
 
 export class LiveBrokerManager extends IBrokerManager {
-    constructor ({config, db, lggr, stats}) {
+    constructor ({config, db, lggr, stats, binanceMainClient}) {
         super({config,db,lggr, stats})
         console.log("LiveBrokerManager Init");
 
@@ -68,30 +70,44 @@ export class LiveBrokerManager extends IBrokerManager {
         this.portfolio_manager.trade(source, dest, sourceQty, this.getCurrentPrice(source+dest))        
     }
 
-
+    close() {
+        binancePriceStream.close()
+    }
 
 }
 
 
 // Manager for feeding historical data
 export class BacktestingBrokerManager extends IBrokerManager { 
-    constructor ({config, db, lggr, stats}) {
+    constructor ({config, db, lggr, stats, binanceMainClient,trader}) {
         super({config,db,lggr, stats})
         this.portfolio_manager=new VirtualPortfolioManager();
-        startDate=new Date(2022,1,1,0,0,0)
-        endDate=startDate+2*60*1000
-        this.backtestingPriceStream=new BacktestingPriceStream(startDate,endDate)
+        this.trader=trader
+        const startDate=config.startDate
+        const endDate=config.endDate
+        const interval=config.interval
+        this.backtestingPriceStream=new BacktestingPriceStream(startDate,endDate,interval, db,binanceMainClient,this) // TEMP
+        // this.backtestingPriceStream.setOnFinishCallback(this.onFinishCallback.bind(this))
     }
+
     setTime(time) {
         this.currentTime=time;
     }
     subscribeTicker(ticker,handler) {
         this.backtestingPriceStream.subscribeTicker('ETHUSDT',this.onData.bind(this))
     }
-
+    async generateData(date) {
+        await this.backtestingPriceStream.getData(date)
+    }
     getFee() { return 0.005 }
     getCurrentDate () {
         return this.currentTime
+    }
+    finish() {
+        this.trader.close()
+    }
+    close() {
+        this.backtestingPriceStream.close()
     }
 }
 
