@@ -11,8 +11,9 @@ class IPortfolioManager {
     }
 }
 
-export class LivePortfolioManger extends IPortfolioManager {
+export class LivePortfolioManager extends IPortfolioManager {
     constructor (manager) {
+        super()
         this.manager=manager
     }
     getPortfolio () {
@@ -26,6 +27,7 @@ export class LivePortfolioManger extends IPortfolioManager {
 
 export class VirtualPortfolioManager extends IPortfolioManager{
     constructor (manager) {
+        super()
         this.portfolio={}
         this.manager=manager
     }

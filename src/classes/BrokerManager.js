@@ -2,7 +2,7 @@
 import {Spot} from '@binance/connector'
 import QuotesDB from './QuotesDB'
 import {LivePortfolioManager, VirtualPortfolioManager} from './PortfolioManager'
-
+import {streamCollection, AllTickerStream, binancePriceStream, BacktestingPriceStream} from './BinanceSocket'
 class IBrokerManager {
     constructor ({config, db, lggr, stats}) {
         this.logger=lggr
@@ -13,8 +13,22 @@ class IBrokerManager {
     getFee() {}
     getCurrentPrice(ticker) {}
     getCurrentCandle(ticker) {}
-    trade (source, dest, sourceQty) {    } 
-
+    trade (source, dest, sourceQty) {    }
+    setOnDataHandler(handler) {
+        this.onDataHandler=handler;
+    }
+    setOnInitDataHandler(handler) {
+        this.onInitDataHandler=handler;
+    }
+    subscribeTicker(ticker,handler) {
+        throw new Error( "Have to implement subscribeTicker")
+    }
+    onData(data) {
+        this.onDataHandler(data)
+    }
+    initData(data) {
+        this.onInitDataHandler(data)
+    }
 }
 
 export class LiveBrokerManager extends IBrokerManager {
@@ -22,13 +36,10 @@ export class LiveBrokerManager extends IBrokerManager {
         super({config,db,lggr, stats})
         console.log("LiveBrokerManager Init");
 
-        const apiKey = process.env['API_KEY']
-        const apiSecret = process.env['API_SECRET']
 
-        const client = new Spot(apiKey, apiSecret, {logger: lggr})
-        this.client=client
         this.portfolio_manager=new LivePortfolioManager(this);
-
+        //const ats=new AllTickerStream('ETHUSDT','1m',this)
+        //streamCollection.openStream(ats)
     }
 
     getFee() {
@@ -45,6 +56,9 @@ export class LiveBrokerManager extends IBrokerManager {
         return this.quotes_db.getQuote(ticker,this.getCurrentDate())
 
     }
+    subscribeTicker(ticker,handler) {
+        binancePriceStream.subscribeTicker('ETHUSDT',this.onData.bind(this))
+    }
 
     getCurrentCandle(ticker) {
 
@@ -54,18 +68,27 @@ export class LiveBrokerManager extends IBrokerManager {
         this.portfolio_manager.trade(source, dest, sourceQty, this.getCurrentPrice(source+dest))        
     }
 
+
+
 }
 
 
 // Manager for feeding historical data
 export class BacktestingBrokerManager extends IBrokerManager { 
-    constructor ({config, db, logger, stats}) {
+    constructor ({config, db, lggr, stats}) {
         super({config,db,lggr, stats})
         this.portfolio_manager=new VirtualPortfolioManager();
+        startDate=new Date(2022,1,1,0,0,0)
+        endDate=startDate+2*60*1000
+        this.backtestingPriceStream=new BacktestingPriceStream(startDate,endDate)
     }
     setTime(time) {
         this.currentTime=time;
     }
+    subscribeTicker(ticker,handler) {
+        this.backtestingPriceStream.subscribeTicker('ETHUSDT',this.onData.bind(this))
+    }
+
     getFee() { return 0.005 }
     getCurrentDate () {
         return this.currentTime

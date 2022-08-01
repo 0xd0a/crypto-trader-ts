@@ -18,9 +18,12 @@
     "@binance/connector": "^1.11.0",
     "@prisma/client": "^4.0.0",
     "@types/node": "^18.0.5",
+    "binance": "^2.0.37",
     "dotenv": "^16.0.1",
     "es6-promise": "^4.2.8",
     "isomorphic-fetch": "^3.0.0",
+    "it-pipe": "^2.0.3",
+    "it-ws": "^5.0.2",
     "prisma": "^4.0.0",
     "ts-node": "^10.9.1",
     "ws": "^8.8.1"
