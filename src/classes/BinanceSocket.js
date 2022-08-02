@@ -104,10 +104,11 @@ export class BacktestingPriceStream {
     async getData(date) {
         if(!this.quotes_db) this.quotes_db=new QuotesDB(this.binanceMainClient, this.db)
 
-        // if (this.currentDate>this.endDate)
-        //     return // TODO 
-        
-        this.subscriptions.forEach(async s=>{
+//        this.subscriptions.forEach(async s=>{
+
+    for(var i=0;i<this.subscriptions.length;i++) { // instead of forEach using for 
+                                                   // with promises
+            var s=this.subscriptions[i]
             var data=await this.quotes_db.getQuote(s.ticker,date)
             if(data){
                 var dataToPassDown= 
@@ -127,10 +128,10 @@ export class BacktestingPriceStream {
                 
                 this.onData(dataToPassDown)
             }
-            }
-        )
-
-        //this.currentDate.setTime(this.currentDate.getTime()+this.interval)
+    }
+ //           }
+ //       )
+        console.log("GetData executed with ",date)
     }
 
     subscribeTicker(ticker, handler) {

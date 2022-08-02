@@ -56,7 +56,7 @@ export default class QuotesDB {
                 console.log("#2 Still couldn't find it")
             }
         } finally {
-            this.db_semaphore.unlock()
+            this.db_semaphore.unlock() // unlock all the other "threads"
         }   
         return l1    
         // will be used for both backtesting and live trading

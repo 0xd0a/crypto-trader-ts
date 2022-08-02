@@ -19,9 +19,13 @@ export class LivePortfolioManager extends IPortfolioManager {
     getPortfolio () {
         // await getPortfoliofromclient
     }
-    trade(source,dest,sourceQty, price) {
-        //await generatearealtrade()
-        //this.trade_log.push({source:source, dest:dest, sourceQty: sourceQty, price: price, date:this.manager.getCurrentDate()})
+    async trade(source,dest,sourceQty, price) {
+        //const result=await generatearealtrade()
+        this.trade_log.push({source:source, dest:dest, sourceQty: sourceQty, price: price, date:date})
+
+        return {
+            result:0
+        }
     }
 }
 
@@ -32,12 +36,18 @@ export class VirtualPortfolioManager extends IPortfolioManager{
         this.manager=manager
     }
 
-    getPortfolio () {return this.portfolio}
+    getPortfolio () { return this.portfolio }
+    getTradeLog () { return this.trade_log }
+    async trade(source, dest, destQty, price, date) {
+        if(!( source in this.portfolio) ) this.portfolio[source]=0
+        if(!( dest in this.portfolio) ) this.portfolio[dest]=0
+        this.portfolio[source]-=destQty*price;
+        this.portfolio[dest]+=destQty;
 
-    trade(source, dest, sourceQty, price) {
-        this.portfolio[source]-=sourceQty;
-        this.portfolio[dest]+=sourceQty*price;
-
-        this.trade_log.push({source:source, dest:dest, sourceQty: sourceQty, price: price, date:this.manager.getCurrentDate()})
+        this.trade_log.push({source:source, dest:dest, destQty: destQty, price: price, date:date})
+        
+        return {
+            result:1,
+        }
     }
 }

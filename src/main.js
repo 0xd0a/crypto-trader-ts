@@ -20,14 +20,15 @@ var loopresolver
 
 const startDate=new Date(2022,3,1,0,0,0)
 const endDate=new Date()
-endDate.setTime(startDate.getTime()+30*60*1000)
+endDate.setTime(startDate.getTime()+1440*60*1000)
+
 var config={
   startDate:startDate,
   endDate:endDate,
   interval:60
 }
 
-const tr=new Trader({traderType:"LIVE",config:config, db:prisma,logger:lggr,strategy:new Strategy(),binanceMainClient:binanceMainClient});
+const tr=new Trader({traderType:"HISTORY",config:config, db:prisma,logger:lggr,strategy:new Strategy(),binanceMainClient:binanceMainClient});
 const tr2=new Trader({traderType:"HISTORY",config:config, db:prisma,logger:lggr,strategy:new Strategy2(),binanceMainClient:binanceMainClient});
 
 process.on('SIGINT', function() {

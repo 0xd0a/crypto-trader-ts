@@ -53,9 +53,10 @@ export default class Trader {
             const endDate=this.config.endDate
             const interval=this.config.interval
             while(currentDate<endDate) {
-                this.brokerManager.generateData(new Date(currentDate))
+                await this.brokerManager.generateData(new Date(currentDate))
                 currentDate.setTime(currentDate.getTime()+interval*1000)
             }
+            console.log("End of backtesting cycle")
             return Promise.resolve()
         }
 

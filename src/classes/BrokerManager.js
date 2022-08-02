@@ -14,7 +14,9 @@ class IBrokerManager {
     getFee() {}
     getCurrentPrice(ticker) {}
     getCurrentCandle(ticker) {}
-    trade (source, dest, sourceQty) {    }
+    async trade (source, dest, destQty, exchangeRate, date) {
+        await this.portfolio_manager.trade(source, dest, destQty, exchangeRate, date)        
+    }
 
     setOnDataHandler(handler) {
         this.onDataHandler=handler;
@@ -66,9 +68,9 @@ export class LiveBrokerManager extends IBrokerManager {
 
     }
 
-    trade (source, dest, sourceQty) {
-        this.portfolio_manager.trade(source, dest, sourceQty, this.getCurrentPrice(source+dest))        
-    }
+    // trade (source, dest, sourceQty) {
+    //     this.portfolio_manager.trade(source, dest, sourceQty, this.getCurrentPrice(source+dest))        
+    // }
 
     close() {
         binancePriceStream.close()
@@ -107,6 +109,9 @@ export class BacktestingBrokerManager extends IBrokerManager {
         this.trader.close()
     }
     close() {
+        console.log("Trade log: ", this.portfolio_manager.getTradeLog())
+        console.log("Balance: ", this.portfolio_manager.getPortfolio())
+
         this.backtestingPriceStream.close()
     }
 }

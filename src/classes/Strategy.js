@@ -27,6 +27,8 @@ export class Strategy {
 
 export class Strategy2 {
     i=0
+    reverted_position=false
+    buy_price=10000000
     constructor() {
         //binancePriceStream.subscribeTicker('BNBUSDT',this.onData.bind(this))
     }
@@ -41,7 +43,22 @@ export class Strategy2 {
     }
     onData(data) {
         this.i++
-//        if(this.i>5) this.trader.terminate()
+
+        if(!this.reverted_position && data.c<this.buy_price) 
+            this.brokerManager.trade('USDT', 'BNB', 1, data.c, data.E)
+            .then(a=>{
+                this.reverted_position=true
+                this.buy_price=data.c
+                console.log("First trade was ",a)
+            })
+
+        if(data.c>this.buy_price*1.02 && this.reverted_position==true) 
+            this.brokerManager.trade('BNB', 'USDT', data.c, 1/data.c, data.E)
+            .then(a=>{
+                this.reverted_position=false
+                console.log("Last trade was ",a)
+            })
+        
         console.log("Strategy2 Receiving data ",this.i," ", data)
     }
 

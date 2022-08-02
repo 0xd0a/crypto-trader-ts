@@ -1,6 +1,6 @@
 # A simplistic nodejs crypto bot 👋
 
-This is a very simple :smiley: yet modular platform to run and test crypto (not only crypto) bots.
+This is a very simple :smiley: yet modular platform to run and test crypto (though not only crypto) bots.
 
 The platform provides various tools and interfaces for trading Strategies like receiving price streams, executing and logging trades, etc.
 
@@ -27,6 +27,11 @@ export class Strategy {
     }
 }
 ~~~
+
+The architecture is built such that Strategy is a plug-n-play standalone class that is guaranteed:
+1) Live/Backtesting agnostic environment (the same code for live or backtesting data)
+2) Data is fed in regular intervals
+3) The general logic is executed in onData() callback. It receives whatever the strategy subscribed to (usually a single price stream) and then makes decisions on trades using indicators.
 
 ## Installation
 Install all the packages
