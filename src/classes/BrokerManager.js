@@ -3,6 +3,20 @@ import {Spot} from '@binance/connector'
 import QuotesDB from './QuotesDB'
 import {LivePortfolioManager, VirtualPortfolioManager} from './PortfolioManager'
 import {streamCollection, AllTickerStream, binancePriceStream, BacktestingPriceStream} from './BinanceSocket'
+
+export const Interval={
+    Minute: '1m',
+    FiveMinutes: '5m',
+    Hour: '1h',
+    Day: '1d'
+}
+
+export const IntervalInSeconds={
+    '1m':60,
+    '5m':300,
+    '1h':3600,
+    '1d':86400
+}
 class IBrokerManager {
     constructor ({config, db, lggr, stats}) {
         this.logger=lggr
@@ -14,8 +28,8 @@ class IBrokerManager {
     getFee() {}
     getCurrentPrice(ticker) {}
     getCurrentCandle(ticker) {}
-    async trade (source, dest, destQty, exchangeRate, date) {
-        await this.portfolio_manager.trade(source, dest, destQty, exchangeRate, date)        
+    async trade (type, source, dest, destQty, exchangeRate, date) {
+        await this.portfolio_manager.trade(type, source, dest, destQty, exchangeRate, date)        
     }
 
     setOnDataHandler(handler) {
@@ -24,7 +38,7 @@ class IBrokerManager {
     setOnInitDataHandler(handler) {
         this.onInitDataHandler=handler;
     }
-    subscribeTicker(ticker,handler) {
+    subscribeTicker(ticker,interval, handler) {
         throw new Error( "Have to implement subscribeTicker")
     }
     onData(data) {
@@ -40,16 +54,13 @@ export class LiveBrokerManager extends IBrokerManager {
         super({config,db,lggr, stats})
         console.log("LiveBrokerManager Init");
 
-
         this.portfolio_manager=new LivePortfolioManager(this);
-        //const ats=new AllTickerStream('ETHUSDT','1m',this)
-        //streamCollection.openStream(ats)
+        this.rcvBuff=[]
+        this.subscriptions=[]
     }
-
     getFee() {
 
     }
-
     getCurrentDate() {
         return new Date()
     }
@@ -60,17 +71,20 @@ export class LiveBrokerManager extends IBrokerManager {
         return this.quotes_db.getQuote(ticker,this.getCurrentDate())
 
     }
-    subscribeTicker(ticker,handler) {
-        binancePriceStream.subscribeTicker(ticker,this.onData.bind(this))
+    subscribeTicker(ticker,interval, handler) {
+        subscriptions.push({ticker:ticker, interval:interval})
+        binancePriceStream.subscribeTicker(ticker, interval, this.onData.bind(this))
     }
 
-    getCurrentCandle(ticker) {
-
+    onData(data) {
+        if(data.k?.x) {
+            this.rcvBuff.push(data)
+            if (this.rcvBuff.length==this.subscriptions.length) {
+                this.onDataHandler((rcvBuff.length==1)?rcvBuff[0]:rcvBuff)
+                this.rcvBuff=[]
+            }
+        }
     }
-
-    // trade (source, dest, sourceQty) {
-    //     this.portfolio_manager.trade(source, dest, sourceQty, this.getCurrentPrice(source+dest))        
-    // }
 
     close() {
         binancePriceStream.close()
@@ -95,8 +109,8 @@ export class BacktestingBrokerManager extends IBrokerManager {
     setTime(time) {
         this.currentTime=time;
     }
-    subscribeTicker(ticker,handler) {
-        this.backtestingPriceStream.subscribeTicker(ticker,this.onData.bind(this))
+    subscribeTicker(ticker,interval, handler) {
+        this.backtestingPriceStream.subscribeTicker(ticker,interval, this.onData.bind(this))
     }
     async generateData(date) {
         await this.backtestingPriceStream.getData(date)

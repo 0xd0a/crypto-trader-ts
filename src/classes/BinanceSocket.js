@@ -7,6 +7,7 @@ import { WebsocketClient} from 'binance';
 import {Console} from 'console'
 import fs from 'fs'
 import QuotesDB from './QuotesDB';
+import { IntervalInSeconds } from './BrokerManager';
 
 // TODO: make an async wrapper around WebSocket
 class BinancePriceStream {
@@ -44,7 +45,7 @@ class BinancePriceStream {
     // THERE'S A BUG WITH THE LIBRARY THAT WON'T ALLOW TO SUBSCRIBE TO THE SAME TICKER TWICE
     // FIXED IT
 
-    subscribeTicker(ticker, handler) {
+    subscribeTicker(ticker, interval, handler) {
         console.log("Adding subscription to ",ticker)
         const element=this.subscriptions.find(s=>s.ticker==ticker)
         if(element) {
@@ -52,8 +53,9 @@ class BinancePriceStream {
             element.handler.push(handler)
             return
         }
-        const ws=this.client.subscribeSpotSymbolMini24hrTicker(ticker);
-        this.subscriptions.push({ticker:ticker,handler:[handler],ws:ws})
+        //const ws=this.client.subscribeSpotSymbolMini24hrTicker(ticker); // Mini ticker
+        const ws=this.client.subscribeKlines(ticker,interval,'spot'); // Klines market
+        this.subscriptions.push({ticker:ticker,interval:interval,handler:[handler],ws:ws})
     }
 
     onData(data) {
@@ -78,7 +80,7 @@ export class BacktestingPriceStream {
     endDate
     
     constructor (startDate, endDate,interval, db, binanceMainClient,brokerManager) {
-        this.currentDate=startDate
+        this.currentDate=new Date(startDate)
         this.endDate=endDate
         this.interval=interval
         this.subscriptions=[]
@@ -88,53 +90,90 @@ export class BacktestingPriceStream {
 
     }
 
-
-    generateData() { // emulate price socket with setImmediate
-        // if(!this.quotes_db) this.quotes_db=new QuotesDB(this.binanceMainClient, this.db)
-
-        // this.subscriptions?.forEach(s=>this.quotes_db.getQuote(s.ticker,this.currentDate)
-        //     .then(v=>this.onData(v)))
-        // this.currentDate.setTime(this.currentDate.getTime()+this.interval*1000)
-        // if (this.currentDate<this.endDate) 
-        //     this.timeOut=setImmediate(this.generateData.bind(this)) 
-        // else
-        //     this.brokerManager.finish();
-    }
-
-    async getData(date) {
+    async generateData() { // emulate price socket with setImmediate
         if(!this.quotes_db) this.quotes_db=new QuotesDB(this.binanceMainClient, this.db)
 
-//        this.subscriptions.forEach(async s=>{
-
-    for(var i=0;i<this.subscriptions.length;i++) { // instead of forEach using for 
-                                                   // with promises
+        for(var i=0;i<this.subscriptions.length;i++) { // forEach does not support await 
             var s=this.subscriptions[i]
-            var data=await this.quotes_db.getQuote(s.ticker,date)
+            var data=await this.quotes_db.getQuote(s.ticker,s.interval,this.currentDate)
             if(data){
+                // var dataToPassDown= 
+                //     {
+                //         e: '24hrMiniTicker',
+                //         E: data.opentime.getTime(),
+                //         s: data.ticker,
+                //         c: data.priceC,
+                //         o: data.priceO,
+                //         h: data.priceH,
+                //         l: data.priceL,
+                //         v: data.volume,
+                //         q: '0',
+                //         i: s.interval,
+                //         wsMarket: 'spot',
+                //         wsKey: 'spot_miniTicker_'+data.ticker.toLowerCase()+'_'
+                //     }
                 var dataToPassDown= 
-                    {
-                        e: '24hrMiniTicker',
-                        E: data.opentime.getTime(),
-                        s: data.ticker,
+                {
+                    e: 'kline',
+                    E: data.opentime.getTime(),
+                    s: data.ticker,
+                    k: {
+                        t:data.opentime.getTime(),
                         c: data.priceC,
                         o: data.priceO,
                         h: data.priceH,
                         l: data.priceL,
                         v: data.volume,
                         q: '0',
-                        wsMarket: 'spot',
-                        wsKey: 'spot_miniTicker_'+data.ticker.toLowerCase()+'_'
-                    }
+                        i: s.interval,
+                        x:true,
+                    },
+                    wsMarket: 'spot',
+                    wsKey: 'spot_kline_'+data.ticker.toLowerCase()+'_'+s.interval
+                }
                 
                 this.onData(dataToPassDown)
             }
-    }
- //           }
- //       )
-        console.log("GetData executed with ",date)
+        }
+
+        this.currentDate.setTime(this.currentDate.getTime()+this.interval*1000)
+        if (this.currentDate<this.endDate)
+            this.timeOut=setImmediate(this.generateData.bind(this)) 
+        else
+            this.brokerManager.finish();
     }
 
-    subscribeTicker(ticker, handler) {
+    async getData(date) { // This is an OLD function used to be triggered by Trader class
+        // if(!this.quotes_db) this.quotes_db=new QuotesDB(this.binanceMainClient, this.db)
+
+        // for(var i=0;i<this.subscriptions.length;i++) { // instead of forEach using for 
+        //                                            // with promises
+        //     var s=this.subscriptions[i]
+        //     var data=await this.quotes_db.getQuote(s.ticker, this.interval, date)
+        //     if(data){
+        //         var dataToPassDown= 
+        //             {
+        //                 e: '24hrMiniTicker',
+        //                 E: data.opentime.getTime(),
+        //                 s: data.ticker,
+        //                 c: data.priceC,
+        //                 o: data.priceO,
+        //                 h: data.priceH,
+        //                 l: data.priceL,
+        //                 v: data.volume,
+        //                 q: '0',
+        //                 wsMarket: 'spot',
+        //                 wsKey: 'spot_miniTicker_'+data.ticker.toLowerCase()+'_'
+        //             }
+                
+        //         this.onData(dataToPassDown)
+        //     }
+        // }
+
+        // console.log("GetData executed with ",date)
+    }
+
+    subscribeTicker(ticker, interval, handler) {
         console.log("Adding subscription to ",ticker)
         // const element=this.subscriptions?.find(s=>s.ticker==ticker)
         // if(element) {
@@ -142,7 +181,8 @@ export class BacktestingPriceStream {
         //     element.handler.push(handler)
         //     return
         // }
-        this.subscriptions.push({ticker:ticker,handler:[handler],ws:undefined})
+        this.subscriptions.push({ticker:ticker,interval:interval, handler:[handler],ws:undefined})
+        this.interval=IntervalInSeconds[interval] // TODO
         this.generateData()  // if want to use as a stream
     }
 

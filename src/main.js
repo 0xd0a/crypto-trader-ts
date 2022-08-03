@@ -28,7 +28,7 @@ var config={
   interval:60
 }
 
-const tr=new Trader({traderType:"HISTORY",config:config, db:prisma,logger:lggr,strategy:new Strategy(),binanceMainClient:binanceMainClient});
+//const tr=new Trader({traderType:"LIVE",config:config, db:prisma,logger:lggr,strategy:new Strategy(),binanceMainClient:binanceMainClient});
 const tr2=new Trader({traderType:"HISTORY",config:config, db:prisma,logger:lggr,strategy:new Strategy2(),binanceMainClient:binanceMainClient});
 
 process.on('SIGINT', function() {

@@ -1,8 +1,10 @@
+import { kMaxLength } from "buffer"
 import { binancePriceStream } from "./BinanceSocket"
-
+import { Interval } from "./BrokerManager"
 export class Strategy {
     i=0
     constructor() {
+        this.last=null
         //binancePriceStream.subscribeTicker('ETHUSDT',this.onData.bind(this))
     }
     setBrokerManager(brokerManager) {
@@ -11,10 +13,18 @@ export class Strategy {
     setTrader(trader) {
         this.trader=trader
     }
-    init() {
-        this.brokerManager.subscribeTicker('ETHUSDT',this.onData.bind(this))
+    init() { //one should subscribe to the same interval, not combined but have to sync streams
+        this.brokerManager.subscribeTicker('ETHUSDT',Interval.Minute, this.onData.bind(this))
+        this.brokerManager.subscribeTicker('BTCUSDT',Interval.Minute, this.onData.bind(this))
     }
     onData(data) {
+        if(data.e=='kline') {
+            if(this.last?.k?.t!=data?.k?.t) {
+                this.last=data
+                return
+            }
+        }
+
         this.i++
 //        if(this.i>3) this.trader.terminate()
         console.log("Strategy Receiving data ", this.i," ",data)
@@ -39,13 +49,14 @@ export class Strategy2 {
         this.trader=trader
     }
     init() {
-        this.brokerManager.subscribeTicker('BNBUSDT',this.onData.bind(this))
+        this.brokerManager.subscribeTicker('BNBUSDT',Interval.FiveMinutes, this.onData.bind(this))
     }
     onData(data) {
         this.i++
-
+        if(data.e=="kline")
+            data=data.k
         if(!this.reverted_position && data.c<this.buy_price) 
-            this.brokerManager.trade('USDT', 'BNB', 1, data.c, data.E)
+            this.brokerManager.trade('BUY','USDT', 'BNB', 1, data.c, data.t)
             .then(a=>{
                 this.reverted_position=true
                 this.buy_price=data.c
@@ -53,7 +64,7 @@ export class Strategy2 {
             })
 
         if(data.c>this.buy_price*1.02 && this.reverted_position==true) 
-            this.brokerManager.trade('BNB', 'USDT', data.c, 1/data.c, data.E)
+            this.brokerManager.trade('SELL','BNB', 'USDT', 1, data.c, data.t)
             .then(a=>{
                 this.reverted_position=false
                 console.log("Last trade was ",a)

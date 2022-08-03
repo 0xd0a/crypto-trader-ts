@@ -48,17 +48,17 @@ export default class Trader {
         // while(data=await this.brokerManager.newData())
         //     console.log(data)
         console.log("Trader::run starting")
-        if(this.traderType=="HISTORY") {
-            var currentDate=new Date(this.config.startDate)
-            const endDate=this.config.endDate
-            const interval=this.config.interval
-            while(currentDate<endDate) {
-                await this.brokerManager.generateData(new Date(currentDate))
-                currentDate.setTime(currentDate.getTime()+interval*1000)
-            }
-            console.log("End of backtesting cycle")
-            return Promise.resolve()
-        }
+        // if(this.traderType=="HISTORY") {
+        //     var currentDate=new Date(this.config.startDate)
+        //     const endDate=this.config.endDate
+        //     const interval=this.config.interval
+        //     while(currentDate<endDate) {
+        //         await this.brokerManager.generateData(new Date(currentDate))
+        //         currentDate.setTime(currentDate.getTime()+interval*1000)
+        //     }
+        //     console.log("End of backtesting cycle")
+        //     return Promise.resolve()
+        // }
 
         return new Promise ((resolve) => {
             this.finishResolve=resolve
@@ -111,10 +111,11 @@ class TraderCollection {
     }
 
     async terminate () {
-        this.traders.forEach(async t=>{await t.close()})
+        for(var i=0;i<this.traders.length;i++) 
+            await t.close()
 
         console.log("TraderCollection::closeAll")
-        binancePriceStream.close()
+        //binancePriceStream.close()
     }
 }
 

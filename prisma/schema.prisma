@@ -28,6 +28,8 @@ model Quotes {
   @@unique([ticker, opentime, timeframe], name: "ticker_opentime_timeframe")
 }
 
+// keep those for reference :) 
+
 model Post {
   id        Int      @id @default(autoincrement())
   createdAt DateTime @default(now())
