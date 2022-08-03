@@ -18,7 +18,7 @@ export class Strategy {
         this.brokerManager.subscribeTicker('BTCUSDT',Interval.Minute, this.onData.bind(this))
     }
     onData(data) {
-        if(data.e=='kline') {
+        if(data.e=='kline') { // only allow data simultaneously
             if(this.last?.k?.t!=data?.k?.t) {
                 this.last=data
                 return

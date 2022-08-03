@@ -9,12 +9,9 @@ import { streamCollection } from './classes/BinanceSocket'
 import Trader, { traderCollection } from './classes/Trader'
 import { Strategy, Strategy2 } from './classes/Strategy'
 import { MainClient } from 'binance'
-import { AsyncQueue } from './classes/AsyncQueue'
-import Fastify from 'fastify'
 
-const fastify = Fastify({
-  logger: true
-})
+import express from './main-express'
+const app = express()
 
 const prisma = new PrismaClient()
 const binanceMainClient = new MainClient()
@@ -25,24 +22,18 @@ const errorOutput = fs.createWriteStream('./logs/stderr.log')
 const lggr = new Console({ stdout: output, stderr: errorOutput })
 var loopresolver
 
-// const startDate=new Date(2022,3,1,0,0,0)
-// const endDate=new Date()
-// endDate.setTime(startDate.getTime()+1440*60*1000)
+const startDate=new Date(2022,3,1,0,0,0)
+const endDate=new Date()
+endDate.setTime(startDate.getTime()+1440*60*1000)
 
-// var config={
-//   startDate:startDate,
-//   endDate:endDate,
-//   interval:60
-// }
+var config={
+  startDate:startDate,
+  endDate:endDate,
+  interval:60
+}
 
 //const tr=new Trader({traderType:"LIVE",config:config, db:prisma,logger:lggr,strategy:new Strategy(),binanceMainClient:binanceMainClient});
-//const tr2=new Trader({traderType:"HISTORY",config:config, db:prisma,logger:lggr,strategy:new Strategy2(),binanceMainClient:binanceMainClient});
-
-// var AsyncQueue = async.queue(function(config, callback) {
-//   console.log('Task ' + config);
-//   callback();
-// }, 2);
-var jobQueue=new AsyncQueue()
+const tr2=new Trader({traderType:"HISTORY",config:config, db:prisma,logger:lggr,strategy:new Strategy2(),binanceMainClient:binanceMainClient});
 
 process.on('SIGINT', function() {
   console.log("Caught interrupt signal");
@@ -54,44 +45,30 @@ process.on('SIGINT', function() {
 
 
 async function main () {
-    const loop=new Promise(r=>{loopresolver=r})
-
-    fastify.get('/TraderRun', async (request, reply) => {
-      const startDate=new Date(2022,3,1,0,0,0)
-      const endDate=new Date()
-      endDate.setTime(startDate.getTime()+1440*60*1000)
-
-      var config={
-        startDate:startDate,
-        endDate:endDate,
-        interval:60
-      }
-
-      const tr=new Trader({traderType:"HISTORY",config:config, db:prisma,logger:lggr,strategy:new Strategy2(),binanceMainClient:binanceMainClient});
-      var trId = jobQueue.enqueue(tr.run.bind(tr),tr.result.bind(tr),config)
-      //await tr.run()
-      return {id:trId}
+    //const o=await BM.getCurrentPrice('ETHUSDT'
+    app.get('/', (req, res) => {
+      res.send('Hello World!')
+    })
+    const port=3000
+    app.listen(port, () => {
+      console.log(`Example app listening on port ${port}`)
     })
 
-    fastify.get('/TraderResult/:id', async (request, reply) => {
-      var result = jobQueue.getItem( request.params.id )
-      
-      return {id:request.params.id,result:result}
-    })
-
-    try {
-      await fastify.listen({ port: 3000 })
-      console.log("after fastify")
-    } catch (err) {
-      fastify.log.error(err)
-      process.exit(1)
-    }
-//     console.log("Server is now listening on ${address}")
+    
+    
+    // try {
+    //   await fastify.listen({ port: 3000 })
+    //   console.log("after fastify")
+    // } catch (err) {
+    //   fastify.log.error(err)
+    //   process.exit(1)
+    // }
+    //  console.log("Server is now listening on ${address}")
     
     
     //traderCollection.terminate()
 
-    await loop
+    //await loop
     console.log("END OF MAIN");
 }
 

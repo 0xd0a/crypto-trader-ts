@@ -3,7 +3,7 @@
 import { config } from "../../node_modules/dotenv/lib/main"
 import { binancePriceStream } from "./BinanceSocket"
 import LiveBrokerManager, { BacktestingBrokerManager } from "./BrokerManager"
-
+import {async} from 'async'
 
 export default class Trader {
     finishResolve
@@ -42,6 +42,13 @@ export default class Trader {
         // init Algorithm
     }
 
+    result() {
+        return {
+            tradelog: this.brokerManager.portfolio_manager.getTradeLog(),
+            portfolio: this.brokerManager.portfolio_manager.getPortfolio()
+        }
+    }
+
     async run () {
         // A run function which will run the Algorithm using BrokerManager as (Portfolio and borker manager) and "data stream" (either emulated or Live)
         // var data
@@ -62,8 +69,6 @@ export default class Trader {
 
         return new Promise ((resolve) => {
             this.finishResolve=resolve
-
- 
         })
     }
 
@@ -98,7 +103,7 @@ class TraderCollection {
     }
 
     addTrader(trader) {
-        this.traders.push(trader);
+        return this.traders.push(trader)-1;
     }
 
     closeTrader(trader) {
@@ -112,7 +117,7 @@ class TraderCollection {
 
     async terminate () {
         for(var i=0;i<this.traders.length;i++) 
-            await t.close()
+            await this.traders[i].close()
 
         console.log("TraderCollection::closeAll")
         //binancePriceStream.close()
