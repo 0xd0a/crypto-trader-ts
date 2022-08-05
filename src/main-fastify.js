@@ -50,8 +50,18 @@ async function main () {
       }
 
       const tr=new Trader({traderType:"HISTORY",config:config, db:prisma,logger:lggr,strategy:new Strategy2(),binanceMainClient:binanceMainClient});
-      var trId = jobQueue.enqueue(tr.run.bind(tr),tr.result.bind(tr),config)
-      //await tr.run()
+
+      var trId = jobQueue.enqueue(tr.run.bind(tr),tr.result.bind(tr),prisma,config)
+
+      await prisma.BacktestingJobs.create({
+        data: {
+        id:trId,
+        JobStarted:new Date(),
+        JobFinished:null,
+        JobStatus:"started",
+        params: config
+        }
+      })
       return {id:trId}
     })
 

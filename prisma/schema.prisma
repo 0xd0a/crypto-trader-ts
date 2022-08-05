@@ -31,13 +31,12 @@ model Quotes {
 model BacktestingJobs {
   id String @id
   JobStarted DateTime
-  JobFinished DateTime
-  JobStatus Boolean
-  params Json
-  resultTrades Json
-  resultPortfolio Json
+  JobFinished DateTime?
+  JobStatus Boolean? 
+  params Json?
+  resultTrades Json?
+  resultPortfolio Json?
 }
-
 
 // keep those for reference :) 
 
