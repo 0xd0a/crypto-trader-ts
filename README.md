@@ -1,8 +1,10 @@
-# A simplistic nodejs crypto bot 👋
+# A one crypto bot platform to rule them all ₿👋
 
 This is a very simple :smiley: yet modular platform to run and test crypto (though not only crypto) bots.
 
-The platform provides various tools and interfaces for trading Strategies like receiving price streams, executing and logging trades, etc.
+* The platform provides various tools and interfaces for trading Strategies like receiving price streams, executing and logging trades, etc.
+
+* An environment of your preference: a server with API or a standalone CLI.
 
 Here's a basic Strategy:
 ~~~

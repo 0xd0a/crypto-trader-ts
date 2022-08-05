@@ -25,23 +25,6 @@ const errorOutput = fs.createWriteStream('./logs/stderr.log')
 const lggr = new Console({ stdout: output, stderr: errorOutput })
 var loopresolver
 
-// const startDate=new Date(2022,3,1,0,0,0)
-// const endDate=new Date()
-// endDate.setTime(startDate.getTime()+1440*60*1000)
-
-// var config={
-//   startDate:startDate,
-//   endDate:endDate,
-//   interval:60
-// }
-
-//const tr=new Trader({traderType:"LIVE",config:config, db:prisma,logger:lggr,strategy:new Strategy(),binanceMainClient:binanceMainClient});
-//const tr2=new Trader({traderType:"HISTORY",config:config, db:prisma,logger:lggr,strategy:new Strategy2(),binanceMainClient:binanceMainClient});
-
-// var AsyncQueue = async.queue(function(config, callback) {
-//   console.log('Task ' + config);
-//   callback();
-// }, 2);
 var jobQueue=new AsyncQueue()
 
 process.on('SIGINT', function() {
@@ -51,7 +34,6 @@ process.on('SIGINT', function() {
   loopresolver()
 
 });
-
 
 async function main () {
     const loop=new Promise(r=>{loopresolver=r})
@@ -76,7 +58,7 @@ async function main () {
     fastify.get('/TraderResult/:id', async (request, reply) => {
       var result = jobQueue.getItem( request.params.id )
       
-      return {id:request.params.id,result:result}
+      return result  //{id:request.params.id,result:result}
     })
 
     try {
@@ -86,10 +68,6 @@ async function main () {
       fastify.log.error(err)
       process.exit(1)
     }
-//     console.log("Server is now listening on ${address}")
-    
-    
-    //traderCollection.terminate()
 
     await loop
     console.log("END OF MAIN");
@@ -107,15 +85,3 @@ main()
     await prisma.$disconnect()
     process.exit(1)
   })
-  
-  
-// // Get account information
-// client.account().then(response => client.logger.log(response.data))
-
-// // Place a new order
-// client.newOrder('BNBUSDT', 'BUY', 'LIMIT', {
-//   price: '350',
-//   quantity: 1,
-//   timeInForce: 'GTC'
-// }).then(response => client.logger.log(response.data))
-//   .catch(error => client.logger.error(error))

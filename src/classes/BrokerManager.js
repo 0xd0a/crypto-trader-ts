@@ -93,7 +93,7 @@ export class LiveBrokerManager extends IBrokerManager {
 }
 
 
-// Manager for feeding historical data
+// Manager used to feed historical data
 export class BacktestingBrokerManager extends IBrokerManager { 
     constructor ({config, db, lggr, stats, binanceMainClient,trader}) {
         super({config,db,lggr, stats})

@@ -28,6 +28,17 @@ model Quotes {
   @@unique([ticker, opentime, timeframe], name: "ticker_opentime_timeframe")
 }
 
+model BacktestingJobs {
+  id String @id
+  JobStarted DateTime
+  JobFinished DateTime
+  JobStatus Boolean
+  params Json
+  resultTrades Json
+  resultPortfolio Json
+}
+
+
 // keep those for reference :) 
 
 model Post {
