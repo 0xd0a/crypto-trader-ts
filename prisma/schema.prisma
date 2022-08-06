@@ -32,7 +32,7 @@ model BacktestingJobs {
   id String @id
   JobStarted DateTime
   JobFinished DateTime?
-  JobStatus Boolean? 
+  JobStatus String? 
   params Json?
   resultTrades Json?
   resultPortfolio Json?

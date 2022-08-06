@@ -11,12 +11,35 @@ import { Strategy, Strategy2 } from './classes/Strategy'
 import { MainClient } from 'binance'
 import { AsyncQueue } from './classes/AsyncQueue'
 import Fastify from 'fastify'
+import { WebSocketServer } from './websocket-server'
+import mercurius from 'mercurius'
+import { resolvers } from './graphql/resolvers'
+import {typeDefs} from './graphql/schema'
+import { makeExecutableSchema } from '@graphql-tools/schema'
+import { startApolloServerFastify } from './graphql/graphql-server'
+import { start } from 'repl'
+
+const prisma = new PrismaClient()
 
 const fastify = Fastify({
   logger: true
 })
+const Server = startApolloServerFastify(fastify, typeDefs, resolvers, {prisma:prisma})
 
-const prisma = new PrismaClient()
+
+// fastify.register(mercurius, {
+//   schema: makeExecutableSchema({ typeDefs: schema, resolvers: resolvers }),
+//   context: (request, reply) => {
+//     // Return an object that will be available in your GraphQL resolvers
+//     return {
+//         asdf: {prisma:prisma}
+//     }
+//   }
+//   })
+
+
+const webSocketServer=new WebSocketServer()
+
 const binanceMainClient = new MainClient()
 
 const output = fs.createWriteStream('./logs/stdout.log')
@@ -62,20 +85,26 @@ async function main () {
         params: config
         }
       })
-      return {id:trId}
+      reply.send({id:trId})
+      //return {id:trId}
     })
 
     fastify.get('/TraderResult/:id', async (request, reply) => {
       var result = jobQueue.getItem( request.params.id )
-      
-      return result  //{id:request.params.id,result:result}
+      reply.send(result)
+      //return result  //{id:request.params.id,result:result}
     })
 
+    fastify.get('/api', async function (req, reply) {
+      const query = '{ allJobs {id } }'
+      return reply.graphql(query)
+    })
+    
     try {
-      await fastify.listen({ port: 3000 })
+      await Server.then(s=>fastify.listen({ port: 3001 }))
       console.log("after fastify")
     } catch (err) {
-      fastify.log.error(err)
+      console.error(err)
       process.exit(1)
     }
 
