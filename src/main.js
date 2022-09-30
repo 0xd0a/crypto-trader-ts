@@ -20,7 +20,7 @@ var loopresolver
 
 const startDate=new Date(2022,3,1,0,0,0)
 const endDate=new Date()
-endDate.setTime(startDate.getTime()+1440*60*1000)
+endDate.setTime(startDate.getTime()+1440*10*1000)
 
 var config={
   startDate:startDate,
@@ -47,7 +47,7 @@ async function main () {
     traderCollection.terminate()
 
     //await loop
-    console.log("END OF MAIN");
+    console.log("END OF MAIN!");
 }
 
 main()

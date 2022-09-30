@@ -47,15 +47,36 @@ npx prisma migrate dev
 ~~~
 
 Start your favorite mariadb and phpmyadmin (http://localhost:8081)
+server: db
+login: root
+password: example
 ~~~
-cd docker && docker-compose up -d
+cd container && docker-compose up -d
 ~~~
 
 3...2...1...
 ~~~
-npm start
+npm run fastify
 ~~~
+Now access the graphql studio server at http://localhost:3001/gql
+##Action API
+*/TraderRun/ runs the trader and returns its unique id (A trader is one session of the backtesting job)
+*/TraderResults/:id gives a JSON of the result of the particular run
+##GraphQL API
+Endpoint: /graphql
+Functions:
+allJobs
+##Websockets
+Websockets located at port 8001 (used internally to provide two-way communication between this backend and the frontend)
 
+## Prisma Studio
+You can use prisma studio to explore the live database
+~~~
+npx prisma studio
+~~~ 
+Open http://localhost:5555
+## VM2 (npmjs.com/package/vm2)
+Is used to run user-supplied strategies in a kind of a sandbox (which is not perfect but enough for home use)
 ## Working with resulting data
 ### Visualize with a frontend
 ### Log and save to JSON

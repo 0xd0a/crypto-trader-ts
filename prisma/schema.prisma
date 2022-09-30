@@ -30,38 +30,50 @@ model Quotes {
 
 model BacktestingJobs {
   id String @id
+
+  UserId Int?
+  user User? @relation(fields: [UserId], references: [id])
+  
+  environmentId Int?
+  environment Environment? @relation(fields: [environmentId], references: [id])
+
   JobStarted DateTime
   JobFinished DateTime?
-  JobStatus String? 
+  JobStatus String?
+  StrategyCode String @default("")
   params Json?
   resultTrades Json?
   resultPortfolio Json?
 }
 
-// keep those for reference :) 
+model StrategiesCode {
+  id String @id @default(uuid())
+  EnvironmentId Int
+  environment Environment @relation(fields: [EnvironmentId], references: [id])
+  
+  Path String @default("")
+  Text String @default("")
 
-model Post {
-  id        Int      @id @default(autoincrement())
   createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-  title     String   @db.VarChar(255)
-  content   String?
-  published Boolean  @default(false)
-  author    User     @relation(fields: [authorId], references: [id])
-  authorId  Int
+  editedAt DateTime @default(now())
 }
 
-model Profile {
-  id     Int     @id @default(autoincrement())
-  bio    String?
-  user   User    @relation(fields: [userId], references: [id])
-  userId Int     @unique
+model Environment {
+  id  Int @id @default(autoincrement())
+  
+  UserId Int
+  user User @relation(fields: [UserId], references: [id])
+  
+  Name String @default("")
+
+  Strategies StrategiesCode[]
+  backTestingJobs BacktestingJobs[]
 }
 
 model User {
   id      Int      @id @default(autoincrement())
   email   String   @unique
   name    String?
-  posts   Post[]
-  profile Profile?
+  Jobs   BacktestingJobs[]
+  Evironments Environment[]
 }

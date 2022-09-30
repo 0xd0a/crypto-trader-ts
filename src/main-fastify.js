@@ -81,7 +81,7 @@ async function main () {
         id:trId,
         JobStarted:new Date(),
         JobFinished:null,
-        JobStatus:"started",
+        JobStatus:"running",
         params: config
         }
       })
@@ -95,16 +95,16 @@ async function main () {
       //return result  //{id:request.params.id,result:result}
     })
 
-    fastify.get('/api', async function (req, reply) {
-      const query = '{ allJobs {id } }'
-      return reply.graphql(query)
-    })
+    // fastify.get('/api', async function (req, reply) {
+    //   const query = '{ allJobs {id } }'
+    //   return reply.graphql(query)
+    // })
     
     try {
       await Server.then(s=>fastify.listen({ port: 3001 }))
       console.log("after fastify")
     } catch (err) {
-      console.error(err)
+      console.error("Error ",err)
       process.exit(1)
     }
 
